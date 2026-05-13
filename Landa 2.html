@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>LANDA AI PRO | ذكاء اصطناعي متقدم</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Cairo', sans-serif; 
+            background: #0a0f1a;
+            min-height: 100vh;
+        }
+        
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #2a2a3e; border-radius: 10px; }
+        
+        /* Sidebar styles - مثل ChatGPT */
+        .sidebar {
+            position: fixed;
+            right: 0;
+            top: 0;
+            width: 280px;
+            height: 100vh;
+            background: #111827;
+            border-left: 1px solid #1f2937;
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            box-shadow: -4px 0 20px rgba(0,0,0,0.5);
+        }
+        
+        .sidebar.open {
+            transform: translateX(0);
+        }
+        
+        .sidebar-header {
+            padding: 1rem;
+            border-bottom: 1px solid #1f2937;
+            background: #0f172a;
+        }
+        
+        .sidebar-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0.5rem;
+        }
+        
+        .chat-history-item {
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            border-radius: 0.75rem;
+            background: #1e293b;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 1px solid transparent;
+        }
+        
+        .chat-history-item:hover {
+            background: #334155;
+            border-color: #10b981;
+        }
+        
+        .chat-history-item.active {
+            background: #10b981;
+            border-color: #10b981;
+        }
+        
+        .chat-history-item.active .chat-title {
+            color: white;
+        }
+        
+        .chat-title {
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: #e5e5e5;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .chat-date {
+            font-size: 0.7rem;
+            color: #94a3b8;
+            margin-top: 0.25rem;
+        }
+        
+        /* Overlay عند فتح السايدبار */
+        .sidebar-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.6);
+            z-index: 99;
+            display: none;
+        }
+        
+        .sidebar-overlay.active {
+            display: block;
+        }
+        
+        .chat-container {
+            max-width: 48rem;
+            margin: 0 auto;
+            padding: 1rem;
+            transition: margin-right 0.3s ease;
+        }
+        
+        @media (max-width: 768px) {
+            .sidebar { width: 85%; }
+            .chat-container { padding: 0.5rem; }
+        }
+        
+        .message-user {
+            background: #1e293b;
+            border-radius: 1.5rem;
+            padding: 1rem 1.25rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .message-ai {
+            background: transparent;
+            padding: 1rem 1.25rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .message-animate { animation: fadeIn 0.3s ease-out; }
+        
+        @keyframes typing {
+            0%, 100% { opacity: 0.3; transform: scale(0.8); }
+            50% { opacity: 1; transform: scale(1.2); }
+        }
+        .typing-dot {
+            width: 6px;
+            height: 6px;
+            background: #10b981;
+            border-radius: 50%;
+            display: inline-block;
+            animation: typing 1.2s ease-in-out infinite;
+        }
+        .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+        
+        .avatar-user {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        
+        .avatar-ai {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, #10b981, #14b8a6);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        
+        .input-container {
+            max-width: 48rem;
+            margin: 0 auto;
+            background: #1e293b;
+            border-radius: 1.5rem;
+            border: 1px solid #334155;
+            transition: all 0.2s ease;
+        }
+        
+        .input-container:focus-within {
+            border-color: #10b981;
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+        }
+        
+        textarea {
+            background: transparent;
+            border: none;
+            outline: none;
+            color: #e5e5e5;
+            font-size: 0.95rem;
+            line-height: 1.5rem;
+            resize: none;
+            width: 100%;
+            font-family: 'Cairo', sans-serif;
+        }
+        
+        textarea::placeholder {
+            color: #64748b;
+        }
+        
+        .send-btn {
+            background: #10b981;
+            border-radius: 50%;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+        
+        .send-btn:hover { background: #059669; transform: scale(1.05); }
+        .send-btn.disabled { background: #334155; cursor: not-allowed; }
+        
+        pre {
+            background: #0f172a;
+            padding: 1rem;
+            border-radius: 0.75rem;
+            overflow-x: auto;
+            margin: 0.75rem 0;
+        }
+        code { font-family: monospace; font-size: 0.85rem; color: #86efac; }
+        
+        .menu-btn {
+            background: #1e293b;
+            border: 1px solid #334155;
+            padding: 8px 12px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .menu-btn:hover { background: #334155; }
+        
+        .new-chat-btn {
+            background: #10b981;
+            transition: all 0.2s;
+        }
+        .new-chat-btn:hover { background: #059669; transform: scale(1.02); }
+        
+        .delete-chat-btn {
+            opacity: 0;
+            transition: opacity 0.2s;
+            font-size: 12px;
+            padding: 2px 6px;
+            border-radius: 6px;
+            background: rgba(239,68,68,0.2);
+        }
+        .chat-history-item:hover .delete-chat-btn {
+            opacity: 1;
+        }
+        .delete-chat-btn:hover {
+            background: #ef4444;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Sidebar Overlay -->
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+    <!-- Sidebar - سجل المحادثات -->
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="flex justify-between items-center mb-3">
+                <span class="text-white font-bold text-sm">📋 سجل المحادثات</span>
+                <button onclick="closeSidebar()" class="text-gray-400 hover:text-white text-xl">&times;</button>
+            </div>
+            <button onclick="createNewChat()" class="new-chat-btn w-full text-white text-sm font-bold py-2 rounded-xl flex items-center justify-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                </svg>
+                محادثة جديدة
+            </button>
+        </div>
+        <div class="sidebar-content" id="chatHistoryList">
+            <!-- سيتم عرض المحادثات هنا -->
+        </div>
+    </div>
+
+    <!-- Navbar -->
+    <div class="sticky top-0 z-50 bg-black/80 backdrop-blur-xl border-b border-white/10 py-3 px-4">
+        <div class="max-w-4xl mx-auto flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <button onclick="toggleSidebar()" class="menu-btn">
+                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                    </svg>
+                </button>
+                <div class="w-8 h-8 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-xl flex items-center justify-center shadow-lg">
+                    <span class="text-white font-bold text-sm">L</span>
+                </div>
+                <div>
+                    <span class="text-lg font-bold bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">LANDA AI PRO</span>
+                    <span class="text-[10px] text-emerald-500 block -mt-1">✦ سجل محادثات ✦ حفظ تلقائي ✦</span>
+                </div>
+            </div>
+            <a href="https://wa.me/212698348913" target="_blank" class="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 transition text-white text-xs font-bold px-4 py-2 rounded-full shadow-lg">
+                📞 تواصل
+            </a>
+        </div>
+    </div>
+
+    <!-- Main Chat Area -->
+    <div class="chat-container mx-auto px-4 pt-6 pb-40" id="messagesContainer"></div>
+
+    <!-- Typing Indicator -->
+    <div id="typingIndicator" class="chat-container mx-auto px-4 mb-4 hidden">
+        <div class="flex gap-4">
+            <div class="avatar-ai">
+                <span class="text-white text-xs">✨</span>
+            </div>
+            <div class="flex items-center gap-2 bg-gray-800/50 rounded-2xl px-4 py-3">
+                <span class="typing-dot"></span>
+                <span class="typing-dot"></span>
+                <span class="typing-dot"></span>
+                <span class="text-gray-400 text-sm mr-2">لاندا تكتب...</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Input Area -->
+    <div class="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-[#0a0f1a] via-[#0a0f1a] to-transparent pt-6 pb-4">
+        <div class="input-container mx-4 p-2 flex items-end gap-2">
+            <textarea id="userInput" rows="1" placeholder="اكتب رسالتك هنا... اسأل أي شيء" class="flex-1 px-3 py-2 max-h-32" onkeydown="handleEnter(event)"></textarea>
+            <button onclick="sendMessage()" id="sendBtn" class="send-btn flex-shrink-0">
+                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const API_KEY = 'AIzaSyCfsSoHESo0WKBktBuPRcFFrEPW7ojnq0I';
+        const MODEL_NAME = 'gemini-2.5-flash';
+        
+        // بنية البيانات: كل محادثة لها id وعنوان ورسائل
+        let allChats = [];
+        let currentChatId = null;
+        let isWaiting = false;
+        
+        // تحميل المحادثات من localStorage
+        function loadAllChats() {
+            const saved = localStorage.getItem('landa_all_chats');
+            if (saved) {
+                allChats = JSON.parse(saved);
+            } else {
+                // إنشاء محادثة ترحيبية
+                allChats = [{
+                    id: Date.now().toString(),
+                    title: 'مرحباً! 👋',
+                    createdAt: new Date().toISOString(),
+                    messages: [{
+                        role: 'ai',
+                        text: `مرحباً! أنا لاندا، ذكاء اصطناعي متطور يعمل بأحدث تقنيات Gemini 2.5 Pro.\n\nيمكنني مساعدتك في:\n• 📝 كتابة نصوص، رسائل، مقالات\n• 👔 تنسيق ملابس وإطلالات عصرية\n• 🌍 ترجمة فورية بين اللغات\n• 💡 حل المشكلات وتقديم النصائح\n• 📚 شرح مواضيع معقدة ببساطة\n\nاسألني أي شيء، أنا هنا لمساعدتك! 🚀`
+                    }]
+                }];
+            }
+            currentChatId = allChats[0].id;
+            renderChatHistory();
+            loadCurrentChat();
+        }
+        
+        // حفظ كل المحادثات
+        function saveAllChats() {
+            localStorage.setItem('landa_all_chats', JSON.stringify(allChats));
+            renderChatHistory();
+        }
+        
+        // عرض قائمة المحادثات في السايدبار
+        function renderChatHistory() {
+            const container = document.getElementById('chatHistoryList');
+            if (!container) return;
+            
+            container.innerHTML = allChats.map(chat => `
+                <div class="chat-history-item ${chat.id === currentChatId ? 'active' : ''}" onclick="switchToChat('${chat.id}')">
+                    <div class="flex justify-between items-center">
+                        <div class="flex-1">
+                            <div class="chat-title">${escapeHtmlSimple(chat.title)}</div>
+                            <div class="chat-date">${formatDate(chat.createdAt)}</div>
+                        </div>
+                        <button class="delete-chat-btn" onclick="event.stopPropagation(); deleteChat('${chat.id}')" title="حذف المحادثة">
+                            🗑️
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        // تحميل محادثة محددة
+        function loadCurrentChat() {
+            const chat = allChats.find(c => c.id === currentChatId);
+            if (!chat) return;
+            
+            const container = document.getElementById('messagesContainer');
+            container.innerHTML = '';
+            
+            chat.messages.forEach(msg => {
+                addMessageToUI(msg.role, msg.text, false);
+            });
+            
+            scrollToBottom();
+        }
+        
+        // إضافة رسالة للواجهة ولواجهة البيانات
+        function addMessageToUI(role, text, saveToChat = true) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message-${role} message-animate`;
+            
+            if (role === 'user') {
+                messageDiv.innerHTML = `
+                    <div class="flex gap-4">
+                        <div class="avatar-user"><span class="text-white text-xs">👤</span></div>
+                        <div class="flex-1">
+                            <div class="text-blue-400 text-sm font-bold mb-1">أنت</div>
+                            <div class="text-gray-200 text-base leading-relaxed">${escapeHtml(text)}</div>
+                        </div>
+                    </div>
+                `;
+            } else {
+                messageDiv.innerHTML = `
+                    <div class="flex gap-4">
+                        <div class="avatar-ai"><span class="text-white text-xs">✨</span></div>
+                        <div class="flex-1">
+                            <div class="text-emerald-400 text-sm font-bold mb-1">LANDA AI PRO</div>
+                            <div class="text-gray-200 text-base leading-relaxed">${escapeHtml(text)}</div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            document.getElementById('messagesContainer').appendChild(messageDiv);
+            
+            if (saveToChat) {
+                const chat = allChats.find(c => c.id === currentChatId);
+                if (chat) {
+                    chat.messages.push({ role, text });
+                    // تحديث عنوان المحادثة بناءً على أول رسالة للمستخدم
+                    if (role === 'user' && chat.title === 'مرحباً! 👋') {
+                        chat.title = text.substring(0, 30) + (text.length > 30 ? '...' : '');
+                    }
+                    saveAllChats();
+                }
+            }
+            
+            scrollToBottom();
+            return messageDiv;
+        }
+        
+        // التبديل بين المحادثات
+        function switchToChat(chatId) {
+            currentChatId = chatId;
+            loadCurrentChat();
+            renderChatHistory();
+            closeSidebar();
+        }
+        
+        // إنشاء محادثة جديدة
+        function createNewChat() {
+            const newChat = {
+                id: Date.now().toString(),
+                title: 'محادثة جديدة',
+                createdAt: new Date().toISOString(),
+                messages: [{
+                    role: 'ai',
+                    text: 'مرحباً! أنا لاندا، كيف يمكنني مساعدتك اليوم؟ 😊'
+                }]
+            };
+            allChats.unshift(newChat);
+            currentChatId = newChat.id;
+            saveAllChats();
+            loadCurrentChat();
+            closeSidebar();
+        }
+        
+        // حذف محادثة
+        function deleteChat(chatId) {
+            if (allChats.length === 1) {
+                if (confirm('⚠️ هذه آخر محادثة. هل تريد حذفها وإنشاء محادثة جديدة؟')) {
+                    allChats = [];
+                    createNewChat();
+                }
+                return;
+            }
+            
+            if (confirm('هل أنت متأكد من حذف هذه المحادثة؟')) {
+                const index = allChats.findIndex(c => c.id === chatId);
+                if (index !== -1) {
+                    allChats.splice(index, 1);
+                    if (currentChatId === chatId) {
+                        currentChatId = allChats[0].id;
+                    }
+                    saveAllChats();
+                    loadCurrentChat();
+                }
+            }
+        }
+        
+        async function sendMessage() {
+            if (isWaiting) return;
+            
+            const message = document.getElementById('userInput').value.trim();
+            if (!message) return;
+            
+            isWaiting = true;
+            document.getElementById('sendBtn').classList.add('disabled');
+            
+            addMessageToUI('user', message, true);
+            document.getElementById('userInput').value = '';
+            document.getElementById('typingIndicator').classList.remove('hidden');
+            scrollToBottom();
+            
+            try {
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/${MODEL_NAME}:generateContent?key=${API_KEY}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: message }] }],
+                        generationConfig: { temperature: 0.8, topK: 40, topP: 0.95, maxOutputTokens: 8192 }
+                    })
+                });
+                
+                const data = await response.json();
+                document.getElementById('typingIndicator').classList.add('hidden');
+                
+                if (data.candidates && data.candidates[0] && data.candidates[0].content) {
+                    const aiText = data.candidates[0].content.parts[0].text;
+                    addMessageToUI('ai', aiText, true);
+                } else if (data.error) {
+                    addMessageToUI('ai', `⚠️ خطأ: ${data.error.message}`, true);
+                } else {
+                    addMessageToUI('ai', '⚠️ لم أتمكن من معالجة طلبك حالياً.', true);
+                }
+            } catch (error) {
+                document.getElementById('typingIndicator').classList.add('hidden');
+                addMessageToUI('ai', '❌ مشكل في الاتصال بالإنترنت.', true);
+            } finally {
+                isWaiting = false;
+                document.getElementById('sendBtn').classList.remove('disabled');
+                document.getElementById('userInput').focus();
+            }
+        }
+        
+        // دوال مساعدة
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML.replace(/\n/g, '<br>');
+        }
+        
+        function escapeHtmlSimple(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        function formatDate(dateStr) {
+            const date = new Date(dateStr);
+            const now = new Date();
+            const diff = now - date;
+            if (diff < 86400000) return 'اليوم';
+            if (diff < 172800000) return 'أمس';
+            return date.toLocaleDateString('ar');
+        }
+        
+        function handleEnter(event) {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                sendMessage();
+            }
+        }
+        
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('open');
+            document.getElementById('sidebarOverlay').classList.toggle('active');
+        }
+        
+        function closeSidebar() {
+            document.getElementById('sidebar').classList.remove('open');
+            document.getElementById('sidebarOverlay').classList.remove('active');
+        }
+        
+        function scrollToBottom() {
+            setTimeout(() => {
+                const container = document.getElementById('messagesContainer');
+                container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
+            }, 100);
+        }
+        
+        // تهيئة
+        loadAllChats();
+        document.getElementById('userInput').focus();
+        
+        // Auto-resize textarea
+        document.getElementById('userInput').addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = Math.min(this.scrollHeight, 128) + 'px';
+        });
+    </script>
+</body>
+</html>
